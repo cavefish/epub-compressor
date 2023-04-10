@@ -49,16 +49,16 @@ def get_size_format(b, factor=1024, suffix="B"):
     return f"{b:.2f}Y{suffix}"
 
 
-def compress_epub(input_path, output_path, quality):
+def compress_epub(input_path, output_path, quality, compressionlevel=6):
     epub_original_size = os.stat(input_path).st_size
-    logging.info("Compressing {} (original size: {}) with {}% image quality. Output path: {}".format(input_path, get_size_format(epub_original_size), quality, output_path))
+    logging.info("Compressing {} (original size: {}) with {}% image quality and a compression level of {}. Output path: {}".format(input_path, get_size_format(epub_original_size), quality, compressionlevel, output_path))
     book = epub.read_epub(input_path)
     for image in book.get_items_of_type(ebooklib.ITEM_IMAGE):
         logging.info("Compressing image {}".format(image.file_name))
         image_compressed, compressed_size, original_size = compress_image(image.get_content(), quality=quality)
         image.set_content(image_compressed)
     
-    epub.write_epub(output_path, book, {})
+    epub.write_epub(output_path, book, {"compressionlevel": compressionlevel})
     epub_new_size = os.stat(output_path).st_size
     logging.info("Finished! New size is {} (original size: {}). Compression: {:.2f}%".format(get_size_format(epub_new_size), get_size_format(epub_original_size), (epub_original_size - epub_new_size)/epub_original_size*100))
 
@@ -68,8 +68,9 @@ parser = argparse.ArgumentParser(description="Compress an EPUB file by compressi
 parser.add_argument("input", help="Path to input epub")
 parser.add_argument("-o", "--output", default="./compressed.epub", help="Path to output epub (defaults to ./compressed.epub)")
 parser.add_argument("-q", "--quality", default=75, type=int, help="Quality of compressed images. 100 best quality and more size, 1 worst quality and less size (defaults to 75)")
+parser.add_argument("-c", "--compressionlevel", default=6, type=int, help="Compression level. 0 no compression and fastest, 9 best compression amd slowest (defaults to 6)")
 args = parser.parse_args()
 
 print(args)
 logging.basicConfig(filename='epub-compressor_{:%Y-%m-%dT%H%M%S}.log'.format(datetime.now()), format='%(asctime)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S', encoding='utf-8', level=logging.INFO)
-compress_epub(args.input, args.output, args.quality)
+compress_epub(args.input, args.output, args.quality, args.compressionlevel)
